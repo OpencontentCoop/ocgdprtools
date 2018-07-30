@@ -9,6 +9,7 @@ $tpl->setVariable('acceptance_link', $params['link']);
 $tpl->setVariable('acceptance_link_text', $params['link_text']);
 $tpl->setVariable('acceptance_button_name', $params['button_name']);
 $tpl->setVariable('acceptance_var_name', $params['var_name']);
+$tpl->setVariable('acceptance_is_checked', $params['is_checked']);
 $tpl->setVariable('original_request_uri', $params['original_request_uri']);
 $tpl->setVariable('original_variables', $params['original_variables']);
 

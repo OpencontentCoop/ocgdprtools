@@ -5,7 +5,7 @@
     {/foreach}
     <div class="checkbox">
         <label>
-            <input type="checkbox" name="{$acceptance_var_name|wash()}" />
+            <input type="checkbox" name="{$acceptance_var_name|wash()}" {if $acceptance_is_checked}checked="checked"{/if} />
             <p>{$acceptance_text}</p>
             <a target="_blank" href="{$acceptance_link|wash()}">{$acceptance_link_text|wash()}</a>
         </label>

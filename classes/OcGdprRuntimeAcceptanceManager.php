@@ -8,6 +8,8 @@ class OcGdprRuntimeAcceptanceManager
     const SESSION_URI_VARNAME = 'gdpr_original_uri';
     const SESSION_VARS_VARNAME = 'gdpr_original_variables';
 
+    const PREFERENCE_KEY_PREFIX = 'gdpr_acceptance_';
+
     /**
      * @var eZINI
      */
@@ -56,12 +58,15 @@ class OcGdprRuntimeAcceptanceManager
         $settings = $this->getAcceptanceSettings($uri);
 
         return array(
+
             'title' => $settings['Title'],
             'text' => $settings['Text'],
             'link' => $settings['Link'],
             'link_text' => $settings['LinkText'],
             'button_name' => $settings['ButtonName'],
+
             'var_name' => $this->generatePostVarName($uri),
+            'is_checked' => $this->isAccepted($uri),
             'original_request_uri' => $http->sessionVariable(self::SESSION_REQUEST_VARNAME),
             'original_variables' => $http->sessionVariable(self::SESSION_VARS_VARNAME),
         );
@@ -85,7 +90,15 @@ class OcGdprRuntimeAcceptanceManager
             $settings
         );
 
+        $settings['identifier'] = $identifier;
         return $settings;
+    }
+
+    private function isAccepted(eZURI $uri)
+    {
+        $settings = $this->getAcceptanceSettings($uri);
+        $preferenceKey = self::PREFERENCE_KEY_PREFIX . $settings['identifier'];
+        return eZPreferences::value($preferenceKey) !== false;
     }
 
     private function generatePostVarName(eZURI $uri)
@@ -101,6 +114,10 @@ class OcGdprRuntimeAcceptanceManager
             $http->removeSessionVariable(self::SESSION_REQUEST_VARNAME);
             $http->removeSessionVariable(self::SESSION_URI_VARNAME);
             $http->removeSessionVariable(self::SESSION_VARS_VARNAME);
+
+            $settings = $this->getAcceptanceSettings($uri);
+            $preferenceKey = self::PREFERENCE_KEY_PREFIX . $settings['identifier'];
+            eZPreferences::setValue($preferenceKey, time());
 
             return true;
         }
