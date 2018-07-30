@@ -10,6 +10,5 @@
             <a target="_blank" href="{$acceptance_link|wash()}">{$acceptance_link_text|wash()}</a>
         </label>
     </div>
-
     <input class="button" name="{$acceptance_button_name|wash()}" value="Accetto" type="submit" />
 </form>

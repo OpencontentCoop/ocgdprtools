@@ -1,8 +1,14 @@
 <?php
 $http = eZHTTPTool::instance();
 $tpl = eZTemplate::factory();
+/** @var eZModule $module */
+$module = $Params['Module'];
 
 $params = OcGdprRuntimeAcceptanceManager::instance()->getCurrentAcceptanceTemplateVariables();
+if (empty($params['original_request_uri'])) {
+    return $module->handleError( eZError::KERNEL_NOT_FOUND, 'kernel' );
+}
+
 $tpl->setVariable('acceptance_title', $params['title']);
 $tpl->setVariable('acceptance_text', $params['text']);
 $tpl->setVariable('acceptance_link', $params['link']);
