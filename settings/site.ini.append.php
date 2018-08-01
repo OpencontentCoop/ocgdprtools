@@ -3,4 +3,7 @@
 [Event]
 Listeners[]=request/input@OcGdprListener::onInput
 
+[RoleSettings]
+PolicyOmitList[]=gdpr/acceptance
+
 */ ?>

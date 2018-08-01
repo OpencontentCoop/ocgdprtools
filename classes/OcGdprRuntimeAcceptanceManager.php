@@ -37,8 +37,15 @@ class OcGdprRuntimeAcceptanceManager
 
         $settings = $this->getAcceptanceSettings($uri);
         $isNeedAcceptanceButton = isset($_POST[$settings['ButtonName']]);
+        $hasRequiredFields = true;
+        $requiredFields = isset($settings['RequiredFieldName']) ? (array)$settings['RequiredFieldName'] : array();
+        foreach ($requiredFields as $field) {
+            if (!isset($_POST[$field]) || empty($_POST[$field])){
+                $hasRequiredFields = false;
+            }
+         }
 
-        return $isNeedAcceptanceUri && $isNeedAcceptanceButton;
+        return $isNeedAcceptanceUri && $isNeedAcceptanceButton && $hasRequiredFields;
     }
 
     public function initAcceptance(eZURI $uri)
@@ -64,7 +71,7 @@ class OcGdprRuntimeAcceptanceManager
             'link' => $settings['Link'],
             'link_text' => $settings['LinkText'],
             'button_name' => $settings['ButtonName'],
-
+            
             'var_name' => $this->generatePostVarName($uri),
             'is_checked' => $this->isAccepted($uri),
             'original_request_uri' => $http->sessionVariable(self::SESSION_REQUEST_VARNAME),
