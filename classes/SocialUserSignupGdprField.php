@@ -62,16 +62,19 @@ class SocialUserSignupGdprField extends SocialUserSignupCustomField
             return false;
         }
 
+        /** @var OcGdprDefinition $classAttributeContent */
+        $classAttributeContent = $this->classAttribute->content();
+
         if ($key == 'gdpr_text'){
-            return $this->classAttribute->attribute('data_text5');
+            return $classAttributeContent->getText();
         }
 
         if ($key == 'gdpr_link'){
-            return $this->classAttribute->attribute('data_text4');
+            return $classAttributeContent->getLink();
         }
 
         if ($key == 'gdpr_link_text'){
-            return $this->classAttribute->attribute('data_text3');
+            return $classAttributeContent->getLinkText();
         }
 
         return parent::attribute($key);

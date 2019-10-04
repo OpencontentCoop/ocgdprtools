@@ -10,6 +10,12 @@ class OcGdprRuntimeAcceptanceManager
 
     const PREFERENCE_KEY_PREFIX = 'gdpr_acceptance_';
 
+    const PROFILE_PREFERENCE_KEY = 'gdpr_acceptance_profile';
+    const PROFILE_PREFERENCE_VALUE_OK = 'ok';
+    const PROFILE_PREFERENCE_VALUE_KO = 'ko';
+    const PROFILE_PREFERENCE_VALUE_INDETERMINATE = 'indeterminate';
+    const PROFILE_PREFERENCE_VALUE_REQUEST_CHANGE = 'change';
+
     /**
      * @var eZINI
      */
@@ -61,7 +67,9 @@ class OcGdprRuntimeAcceptanceManager
         $http = eZHTTPTool::instance();
         /** @var eZURI $uri */
         $uri = $http->sessionVariable(self::SESSION_URI_VARNAME);
-
+        if (!$uri instanceof eZURI){
+            return false;
+        }
         $settings = $this->getAcceptanceSettings($uri);
 
         return array(
@@ -118,18 +126,105 @@ class OcGdprRuntimeAcceptanceManager
         $http = eZHTTPTool::instance();
         $postVarName = $this->generatePostVarName($uri);
         if ($http->hasPostVariable($postVarName)){
-            $http->removeSessionVariable(self::SESSION_REQUEST_VARNAME);
-            $http->removeSessionVariable(self::SESSION_URI_VARNAME);
-            $http->removeSessionVariable(self::SESSION_VARS_VARNAME);
 
             $settings = $this->getAcceptanceSettings($uri);
             $preferenceKey = self::PREFERENCE_KEY_PREFIX . $settings['identifier'];
             eZPreferences::setValue($preferenceKey, time());
 
+            $originalPostData = $http->sessionVariable(self::SESSION_VARS_VARNAME);
+            $user = isset($settings['UserFieldName']) && isset($originalPostData[$settings['UserFieldName']]) ?
+                $originalPostData[$settings['UserFieldName']] :
+                eZUser::currentUser()->attribute('login');
+
+            OcGdprListener::logAcceptance(
+                $user,
+                $settings['Text'],
+                $settings['Link']
+            );
+
+            $http->removeSessionVariable(self::SESSION_REQUEST_VARNAME);
+            $http->removeSessionVariable(self::SESSION_URI_VARNAME);
+            $http->removeSessionVariable(self::SESSION_VARS_VARNAME);
+
             return true;
         }
 
         return false;
+    }
+
+    public function checkCurrentUserProfile()
+    {
+        if (eZUser::currentUser()->isAnonymous()){
+            return true;
+        }
+
+        $now = time();
+        $preferenceValue = eZPreferences::value(self::PROFILE_PREFERENCE_KEY);
+        if (strpos($preferenceValue, self::PROFILE_PREFERENCE_VALUE_REQUEST_CHANGE) !== false){
+            $parts = explode(':', $preferenceValue);
+            $inChangeFrom = 0;
+            if (isset($parts[1])){
+                $inChangeFrom = $parts[1];
+            }
+            if ($inChangeFrom == 0 || ($inChangeFrom > 0 && ($now - $inChangeFrom) > 10)){
+                self::setKo();
+                $preferenceValue = self::PROFILE_PREFERENCE_VALUE_KO;
+            }
+        }
+        if ($preferenceValue === false){
+            $gdprAttribute = false;
+            /** @var eZContentObject $object */
+            $object = eZUser::currentUser()->attribute('contentobject');
+            if ($object instanceof eZContentObject) {
+                foreach ($object->dataMap() as $attribute) {
+                    if ($attribute->attribute('data_type_string') === OcGdprType::DATA_TYPE_STRING) {
+                        $gdprAttribute = $attribute;
+                        break;
+                    }
+                }
+            }
+            if ($gdprAttribute instanceof eZContentObjectAttribute){
+                $preferenceValue = $gdprAttribute->hasContent() ? self::PROFILE_PREFERENCE_VALUE_OK : self::PROFILE_PREFERENCE_VALUE_KO;
+            }else{
+                $preferenceValue = self::PROFILE_PREFERENCE_VALUE_INDETERMINATE;
+            }
+
+            eZPreferences::setValue(
+                self::PROFILE_PREFERENCE_KEY,
+                $preferenceValue
+            );
+        }
+
+        eZDebug::writeDebug($preferenceValue . "($now)", __METHOD__);
+
+        return $preferenceValue != self::PROFILE_PREFERENCE_VALUE_KO;
+    }
+
+    public static function setKo($userId = false)
+    {
+        eZPreferences::setValue(
+            self::PROFILE_PREFERENCE_KEY,
+            self::PROFILE_PREFERENCE_VALUE_KO,
+            $userId
+        );
+    }
+
+    public static function setOk($userId = false)
+    {
+        eZPreferences::setValue(
+            self::PROFILE_PREFERENCE_KEY,
+            self::PROFILE_PREFERENCE_VALUE_OK,
+            $userId
+        );
+    }
+
+    public static function setChanging($userId = false)
+    {
+        eZPreferences::setValue(
+            self::PROFILE_PREFERENCE_KEY,
+            self::PROFILE_PREFERENCE_VALUE_REQUEST_CHANGE . ':' . time(),
+            $userId
+        );
     }
 
 }
