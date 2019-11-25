@@ -4,14 +4,8 @@ class OcGdprType extends eZDataType
 {
     const DATA_TYPE_STRING = 'ocgdpr';
 
-    const TEXT_VARIABLE = 'data_text5';
-
-    const LINK_VARIABLE = 'data_text4';
-
-    const LINK_TEXT_VARIABLE = 'data_text3';
-
     /**
-     * @var eZContentClassAttribute
+     * @var array
      */
     private $classContent;
 
@@ -19,7 +13,7 @@ class OcGdprType extends eZDataType
     {
         $this->eZDataType(
             self::DATA_TYPE_STRING,
-            ezpI18n::tr( 'kernel/classes/datatypes', "GDPR Acceptance", 'Datatype name' ),
+            ezpI18n::tr('kernel/classes/datatypes', "GDPR Acceptance", 'Datatype name'),
             array(
                 'serialize_supported' => true
             )
@@ -32,13 +26,23 @@ class OcGdprType extends eZDataType
      */
     function objectAttributeContent($objectAttribute)
     {
-        if ($this->classContent === null) {
-            $this->classContent = $objectAttribute->classContent();
-        }
+        /** @var OcGdprDefinition $classContent */
+        $classContent = $objectAttribute->classContent();
         return array(
-            'disclaimer' => $this->classContent->attribute(self::LINK_VARIABLE),
+            'text' => $classContent->getText(),
+            'disclaimer' => $classContent->getLink(),
+            'is_current_user' => $this->isEditorCurrentUser($objectAttribute),
             'value' => intval($objectAttribute->attribute('data_int'))
         );
+    }
+
+    /**
+     * @param eZContentClassAttribute $classAttribute
+     * @return OcGdprDefinition
+     */
+    function classAttributeContent($classAttribute)
+    {
+        return OcGdprDefinition::fromClassAttribute($classAttribute);
     }
 
     /**
@@ -58,28 +62,31 @@ class OcGdprType extends eZDataType
      */
     function fetchClassAttributeHTTPInput($http, $base, $classAttribute)
     {
-        $textName = $base . '_' . self::TEXT_VARIABLE . '_' . $classAttribute->attribute('id');
+        $textName = $base . '_text_' . $classAttribute->attribute('id');
         if (!$http->hasPostVariable($textName)) {
             return false;
         }
 
-        $linkName = $base . '_' . self::LINK_VARIABLE . '_' . $classAttribute->attribute('id');
+        $linkName = $base . '_link_' . $classAttribute->attribute('id');
         if (!$http->hasPostVariable($linkName)) {
             return false;
         }
 
-        $linkTextName = $base . '_' . self::LINK_TEXT_VARIABLE . '_' . $classAttribute->attribute('id');
+        $linkTextName = $base . '_link_text_' . $classAttribute->attribute('id');
         if (!$http->hasPostVariable($linkTextName)) {
             return false;
         }
 
-        $text = trim($http->postVariable($textName));
-        $link = trim($http->postVariable($linkName));
-        $linkText = trim($http->postVariable($linkTextName));
+        $text = $http->postVariable($textName);
+        $link = $http->postVariable($linkName);
+        $linkText = $http->postVariable($linkTextName);
 
-        $classAttribute->setAttribute(self::TEXT_VARIABLE, $text);
-        $classAttribute->setAttribute(self::LINK_VARIABLE, $link);
-        $classAttribute->setAttribute(self::LINK_TEXT_VARIABLE, $linkText);
+        $definition = new OcGdprDefinition();
+        $definition->setText($text);
+        $definition->setLink($link);
+        $definition->setLinkText($linkText);
+
+        $definition->setClassAttribute($classAttribute);
 
         return true;
     }
@@ -93,12 +100,27 @@ class OcGdprType extends eZDataType
     function validateObjectAttributeHTTPInput($http, $base, $objectAttribute)
     {
         $acceptName = $base . '_ocgdpr_data_int_' . $objectAttribute->attribute('id');
-        if ($objectAttribute->validateIsRequired() && !$http->hasPostVariable($acceptName)) {
+        if ($objectAttribute->validateIsRequired() && !$http->hasPostVariable($acceptName) && $this->isEditorCurrentUser($objectAttribute)) {
             $objectAttribute->setValidationError(ezpI18n::tr('kernel/classes/datatypes', 'Input required.'));
             return eZInputValidator::STATE_INVALID;
         }
 
         return eZInputValidator::STATE_ACCEPTED;
+    }
+
+    /**
+     * @param eZContentObjectAttribute $objectAttribute
+     * @return bool
+     */
+    private function isEditorCurrentUser($objectAttribute)
+    {
+        /** @var eZContentObject $object */
+        $object = $objectAttribute->attribute("object");
+        if (eZUser::isUserObject($object)) {
+            return eZUser::currentUserID() == $object->attribute('id') || eZUser::currentUser()->isAnonymous();
+        }
+
+        return false;
     }
 
     /**
@@ -113,9 +135,60 @@ class OcGdprType extends eZDataType
         if ($http->hasPostVariable($acceptName)) {
             $objectAttribute->setAttribute('data_int', 1);
             return true;
+        }else{
+            $objectAttribute->setAttribute('data_int', 0);
+            return false;
         }
+    }
 
-        return false;
+    /**
+     * @param eZHTTPTool $http
+     * @param $action
+     * @param eZContentObjectAttribute $contentObjectAttribute
+     * @param $parameters
+     */
+    function customObjectAttributeHTTPAction($http, $action, $contentObjectAttribute, $parameters)
+    {
+        switch ($action) {
+            case 'force_reaccept' :
+                {
+                    if (!$this->isEditorCurrentUser($contentObjectAttribute)){
+                        $this->reset($contentObjectAttribute);
+                    }
+                }
+        }
+    }
+
+    /**
+     * @param eZContentObjectAttribute $contentObjectAttribute
+     */
+    public function reset($contentObjectAttribute)
+    {
+        $contentObjectAttribute->setAttribute('data_int', 0);
+        $contentObjectAttribute->store();
+        OcGdprRuntimeAcceptanceManager::setKo($contentObjectAttribute->attribute('contentobject_id'));
+    }
+
+    /**
+     * @param eZContentObjectAttribute $contentObjectAttribute
+     * @param eZContentObject $contentObject
+     * @param array $publishedNodes
+     */
+    function onPublish($contentObjectAttribute, $contentObject, $publishedNodes)
+    {
+        $content = $this->objectAttributeContent($contentObjectAttribute);
+        if ($this->isEditorCurrentUser($contentObjectAttribute)) {
+            if ($content['value'] == 1) {
+                OcGdprRuntimeAcceptanceManager::setOk($contentObjectAttribute->attribute('contentobject_id'));
+                OcGdprListener::logAcceptance(
+                    eZUser::currentUser()->attribute('login'),
+                    $content['text'],
+                    $content['disclaimer']
+                );
+            }else{
+                OcGdprRuntimeAcceptanceManager::setKo($contentObjectAttribute->attribute('contentobject_id'));
+            }
+        }
     }
 
     /**
@@ -203,4 +276,4 @@ class OcGdprType extends eZDataType
 
 }
 
-eZDataType::register( OcGdprType::DATA_TYPE_STRING, 'OcGdprType' );
+eZDataType::register(OcGdprType::DATA_TYPE_STRING, 'OcGdprType');

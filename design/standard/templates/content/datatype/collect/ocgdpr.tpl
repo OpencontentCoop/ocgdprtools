@@ -4,8 +4,8 @@
     <div class="checkbox">
     <label>
     <input type="checkbox" name="{$attribute_base}_ocgdpr_data_int_{$attribute.id}" {$data_int|choose( '', 'checked="checked"' )} />
-    <div style="font-weight: normal">{$attribute.contentclass_attribute.data_text5}</div>
-    <a target="_blank" href="{$attribute.contentclass_attribute.data_text4|wash()}">{$attribute.contentclass_attribute.data_text3|wash()}</a>
+    <div style="font-weight: normal">{$attribute.contentclass_attribute.content.text}</div>
+    <a target="_blank" href="{$attribute.contentclass_attribute.content.link|wash()}">{$attribute.contentclass_attribute.content.link_text|wash()}</a>
     </label>
     </div>
 {/let}

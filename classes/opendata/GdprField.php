@@ -6,9 +6,11 @@ class GdprField extends BooleanField
 {
     public function getOptions()
     {
-        $acceptanceText = $this->attribute->attribute('data_text5');
-        $linkText = $this->attribute->attribute('data_text3');
-        $linkUrl = $this->attribute->attribute('data_text4');
+        /** @var OcGdprDefinition $attributeContent */
+        $attributeContent = $this->attribute->content();
+        $acceptanceText = $attributeContent->getText();
+        $linkText = $attributeContent->getLinkText();
+        $linkUrl = $attributeContent->getLink();
 
         eZURI::transformURI($linkUrl);
 
