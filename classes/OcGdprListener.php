@@ -8,7 +8,8 @@ class OcGdprListener
     {
         if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] !== 'POST' && empty($_POST)) {
 
-            if (($uri->URI == '' || $uri->URI == 'user/edit') && OcGdprRuntimeAcceptanceManager::instance()->checkCurrentUserProfile() === false) {
+            if (($uri->URI == '' || $uri->URI == 'user/edit' || $uri->URI == eZINI::instance()->variable('SiteSettings', 'IndexPage'))
+                && OcGdprRuntimeAcceptanceManager::instance()->checkCurrentUserProfile() === false) {
                 OcGdprRuntimeAcceptanceManager::setChanging();
                 $http = eZHTTPTool::instance();
                 $redirectUrl = '/gdpr/user_acceptance';

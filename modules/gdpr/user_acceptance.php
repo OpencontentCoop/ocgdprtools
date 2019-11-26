@@ -3,7 +3,7 @@ $http = eZHTTPTool::instance();
 $tpl = eZTemplate::factory();
 /** @var eZModule $module */
 $module = $Params['Module'];
-
+$module->setExitStatus(eZModule::STATUS_IDLE);
 $user = eZUser::currentUser();
 $gdprAttribute = false;
 foreach ($user->contentObject()->dataMap() as $attribute){

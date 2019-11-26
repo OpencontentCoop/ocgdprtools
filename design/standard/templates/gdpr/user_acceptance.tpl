@@ -3,6 +3,7 @@
 
         <div class="row">
             <div class="col">
+                <h2>{$attribute.contentclass_attribute_name|wash()}</h2>
                 {attribute_edit_gui attribute=$attribute}
             </div>
         </div>
