@@ -21,7 +21,6 @@ $postVar = 'ContentObjectAttribute_ocgdpr_data_int_' . $gdprAttribute->attribute
 
 if ($http->hasPostVariable($postVar)){
     $gdprAttribute->setAttribute('data_int', 1);
-
     $content = $gdprAttribute->content();
     OcGdprRuntimeAcceptanceManager::setOk($gdprAttribute->attribute('contentobject_id'));
     OcGdprListener::logAcceptance(
@@ -29,6 +28,7 @@ if ($http->hasPostVariable($postVar)){
         $content['text'],
         $content['disclaimer']
     );
+    $gdprAttribute->store();
 
     $module->redirectTo('/user/edit');
     return;
