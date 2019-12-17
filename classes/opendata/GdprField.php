@@ -4,6 +4,29 @@ use Opencontent\Ocopendata\Forms\Connectors\OpendataConnector\FieldConnector\Boo
 
 class GdprField extends BooleanField
 {
+    private $isEditorCurrentUser = false;
+
+    public function __construct($attribute, $class, $helper)
+    {
+        parent::__construct($attribute, $class, $helper);
+        if (($this->getHelper()->hasParameter('object')
+                && eZUser::currentUserID() == $this->getHelper()->getParameter('object'))
+            || eZUser::currentUser()->isAnonymous()){
+            $this->isEditorCurrentUser = true;
+        }
+    }
+
+    public function getSchema()
+    {
+        $schema = parent::getSchema();
+
+        if (!$this->isEditorCurrentUser){
+            $schema['required'] = false;
+        }
+
+        return $schema;
+    }
+
     public function getOptions()
     {
         /** @var OcGdprDefinition $attributeContent */
@@ -23,6 +46,9 @@ class GdprField extends BooleanField
 
     public function setPayload($postData)
     {
+        if (!$this->isEditorCurrentUser && $postData === 'false'){
+            return '000';
+        }
         return $postData === 'true' ? '1' : '0';
     }
 }
