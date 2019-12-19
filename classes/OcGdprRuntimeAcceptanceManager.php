@@ -49,7 +49,7 @@ class OcGdprRuntimeAcceptanceManager
             if (!isset($_POST[$field]) || empty($_POST[$field])){
                 $hasRequiredFields = false;
             }
-         }
+        }
 
         return $isNeedAcceptanceUri && $isNeedAcceptanceButton && $hasRequiredFields;
     }
@@ -79,7 +79,7 @@ class OcGdprRuntimeAcceptanceManager
             'link' => $settings['Link'],
             'link_text' => $settings['LinkText'],
             'button_name' => $settings['ButtonName'],
-            
+
             'var_name' => $this->generatePostVarName($uri),
             'is_checked' => $this->isAccepted($uri),
             'original_request_uri' => $http->sessionVariable(self::SESSION_REQUEST_VARNAME),
@@ -207,6 +207,7 @@ class OcGdprRuntimeAcceptanceManager
             self::PROFILE_PREFERENCE_VALUE_KO,
             $userId
         );
+        self::clearStaticCache();
     }
 
     public static function setOk($userId = false)
@@ -216,6 +217,7 @@ class OcGdprRuntimeAcceptanceManager
             self::PROFILE_PREFERENCE_VALUE_OK,
             $userId
         );
+        self::clearStaticCache();
     }
 
     public static function setChanging($userId = false)
@@ -225,6 +227,22 @@ class OcGdprRuntimeAcceptanceManager
             self::PROFILE_PREFERENCE_VALUE_REQUEST_CHANGE . ':' . time(),
             $userId
         );
+        self::clearStaticCache();
+    }
+
+    private static function clearStaticCache()
+    {
+        $optionArray = array('iniFile' => 'site.ini',
+            'iniSection' => 'ContentSettings',
+            'iniVariable' => 'StaticCacheHandler');
+        try {
+            $options = new ezpExtensionOptions($optionArray);
+            /** @var ezpStaticCache $staticCacheHandler */
+            $staticCacheHandler = eZExtension::getHandlerClass($options);
+            $staticCacheHandler->generateNodeListCache([eZINI::instance('content.ini')->variable('NodeSettings', 'RootNode')]);
+        }catch (Exception $e){
+            eZDebug::writeError($e->getMessage(), __METHOD__);
+        }
     }
 
 }
