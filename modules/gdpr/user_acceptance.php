@@ -13,7 +13,7 @@ foreach ($user->contentObject()->dataMap() as $attribute){
     }
 }
 
-if (!$gdprAttribute instanceof eZContentObjectAttribute){
+if (!$gdprAttribute instanceof eZContentObjectAttribute || $user->isAnonymous()){
     return $module->handleError( eZError::KERNEL_NOT_AVAILABLE, 'kernel' );
 }
 
