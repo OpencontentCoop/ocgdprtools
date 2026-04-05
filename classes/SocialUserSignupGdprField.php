@@ -1,5 +1,6 @@
 <?php
 
+// @phpstan-ignore class.notFound
 class SocialUserSignupGdprField extends SocialUserSignupCustomField
 {
     public function __construct()
@@ -7,6 +8,7 @@ class SocialUserSignupGdprField extends SocialUserSignupCustomField
         $socialUserIni = eZINI::instance('social_user.ini');
         $settings = $socialUserIni->group('SignupCustomField_gdpracceptance');
         /** @var eZContentClassAttribute[] $dataMap */
+        // @phpstan-ignore class.notFound
         $dataMap = SocialUserRegister::getUserClass()->dataMap();
         $settings['AttributeIdentifier'] = false;
         foreach ($dataMap as $identifier => $attribute){
@@ -14,17 +16,20 @@ class SocialUserSignupGdprField extends SocialUserSignupCustomField
                 $settings['AttributeIdentifier'] = $identifier;
             }
         }
+        // @phpstan-ignore class.noParent
         parent::__construct($settings);
     }
 
     public function setFromRequest()
     {
+        // @phpstan-ignore property.notFound
         if ($this->classAttribute instanceof eZContentClassAttribute) {
             $postName = $this->classAttribute->attribute('identifier');
             $isRequired = $this->classAttribute->attribute('is_required');
 
             $http = eZHTTPTool::instance();
             if ($http->hasPostVariable($postName)) {
+                // @phpstan-ignore property.notFound
                 $this->value = $http->postVariable($postName);
                 eZDebug::writeDebug($this->value, __METHOD__);
             } elseif ($isRequired) {
@@ -39,6 +44,7 @@ class SocialUserSignupGdprField extends SocialUserSignupCustomField
 
     public function getFormTemplatePath()
     {
+        // @phpstan-ignore property.notFound
         if ($this->classAttribute instanceof eZContentClassAttribute) {
             return 'design:gdpr/social_user_field.tpl';
         }
@@ -48,6 +54,7 @@ class SocialUserSignupGdprField extends SocialUserSignupCustomField
 
     public function attributes()
     {
+        // @phpstan-ignore class.noParent
         $attributes = parent::attributes();
         $attributes[] = 'gdpr_text';
         $attributes[] = 'gdpr_link';
@@ -58,6 +65,7 @@ class SocialUserSignupGdprField extends SocialUserSignupCustomField
 
     public function attribute($key)
     {
+        // @phpstan-ignore property.notFound
         if (!$this->classAttribute instanceof eZContentClassAttribute){
             return false;
         }
@@ -77,6 +85,7 @@ class SocialUserSignupGdprField extends SocialUserSignupCustomField
             return $classAttributeContent->getLinkText();
         }
 
+        // @phpstan-ignore class.noParent
         return parent::attribute($key);
     }
 }
